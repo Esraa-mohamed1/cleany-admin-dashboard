@@ -34,7 +34,7 @@ const Dashboard: React.FC = () => {
                 ))}
             </div>
 
-            <div className="dashboard-panel-grid">
+            {/* <div className="dashboard-panel-grid">
                 <section className="dashboard-panel">
                     <div className="dashboard-panel-header">
                         <h3>Order Activity (Real-time)</h3>
@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
                         </div>
                     </div>
                 </section>
-            </div>
+            </div> */}
         </section>
     );
 };
