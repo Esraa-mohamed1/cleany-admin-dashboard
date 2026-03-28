@@ -9,11 +9,12 @@ const navigationGroups = [
     {
         label: 'Inside Board',
         items: [
-            { label: 'Orders', path: '/orders', icon: '📦' },
+            { label: 'Bookings', path: '/bookings', icon: '📦' },
             { label: 'Companies', path: '/companies', icon: '🏢' },
             { label: 'Categories', path: '/categories', icon: '🏷' },
             { label: 'Users', path: '/users', icon: '👤' },
             { label: 'Offers', path: '/offers', icon: '🎁' },
+            { label: 'Transactions', path: '/transactions', icon: '💸' },
         ],
     }
 ];

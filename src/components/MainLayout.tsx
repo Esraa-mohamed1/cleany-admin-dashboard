@@ -12,6 +12,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ navbar, children }) => {
         <div className="app">
             {navbar}
             <div className="main-content">
+                <div 
+                    className="sidebar-overlay" 
+                    onClick={() => document.body.classList.remove('sidebar-open')}
+                />
                 <Sidebar />
                 <main className="page-content">{children}</main>
             </div>

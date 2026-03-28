@@ -5,11 +5,12 @@ import { useLocation } from 'react-router-dom';
 
 const pageTitles = {
   '/': 'Dashboard',
-  '/orders': 'Orders',
+  '/bookings': 'Bookings',
   '/companies': 'Companies',
   '/categories': 'Categories',
-  '/offers': 'Offers',
   '/users': 'Users',
+  '/offers': 'Offers',
+  '/transactions': 'Transactions',
   '/login': 'Login',
 };
 
@@ -38,7 +39,12 @@ const Navbar = () => {
   return (
     <header className="cyber-navbar" aria-label="Top navigation">
       <div className="cyber-navbar-left">
-        <button className="cyber-icon-button" type="button" aria-label="Open menu">
+        <button 
+          className="cyber-icon-button" 
+          type="button" 
+          aria-label="Open menu"
+          onClick={() => document.body.classList.toggle('sidebar-open')}
+        >
           ☰
         </button>
         <div>

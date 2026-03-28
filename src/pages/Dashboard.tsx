@@ -1,12 +1,12 @@
 import React from 'react';
 
 const statCards = [
-    { label: 'TOTAL ORDERS', value: '1,284', icon: '📦', tone: 'blue' },
+    { label: 'TOTAL BOOKINGS', value: '1,284', icon: '📦', tone: 'blue' },
     { label: 'COMPANIES', value: '78', icon: '🏢', tone: 'red' },
     { label: 'CATEGORIES', value: '42', icon: '🏷️', tone: 'purple' },
     { label: 'USERS', value: '986', icon: '👤', tone: 'yellow' },
     { label: 'GROUPS', value: '16', icon: '📋', tone: 'cyan' },
-    { label: 'ACTIVE ORDERS', value: '367', icon: '🔄', tone: 'orange' },
+    { label: 'ACTIVE BOOKINGS', value: '367', icon: '🔄', tone: 'orange' },
     { label: 'COMPLETED', value: '812', icon: '✅', tone: 'green' },
     { label: 'PENDING', value: '105', icon: '⏳', tone: 'gold' },
 ];
@@ -37,7 +37,7 @@ const Dashboard: React.FC = () => {
             {/* <div className="dashboard-panel-grid">
                 <section className="dashboard-panel">
                     <div className="dashboard-panel-header">
-                        <h3>Order Activity (Real-time)</h3>
+                        <h3>Booking Activity (Real-time)</h3>
                         <span>Live feed</span>
                     </div>
                     <div className="activity-bars" aria-hidden="true">
@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
 
                 <section className="dashboard-panel">
                     <div className="dashboard-panel-header">
-                        <h3>Order Distribution</h3>
+                        <h3>Booking Distribution</h3>
                         <span>Segment map</span>
                     </div>
                     <div className="distribution-shell">
@@ -64,11 +64,11 @@ const Dashboard: React.FC = () => {
                         <div className="distribution-legend">
                             <div>
                                 <span className="legend-dot legend-dot-purple" />
-                                Priority Orders
+                                Priority Bookings
                             </div>
                             <div>
                                 <span className="legend-dot legend-dot-cyan" />
-                                Standard Orders
+                                Standard Bookings
                             </div>
                             <div>
                                 <span className="legend-dot legend-dot-gold" />

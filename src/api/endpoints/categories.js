@@ -31,7 +31,7 @@ export const extractCategoriesArray = (payload) => {
 };
 
 export const getCategories = async () => {
-    const response = await axiosInstance.get('/categories/');
+    const response = await axiosInstance.get('/categories');
     return {
         raw: response.data,
         list: extractCategoriesArray(response.data),
@@ -39,13 +39,13 @@ export const getCategories = async () => {
 };
 
 export const createCategory = async (payload) => {
-    return axiosInstance.post('/categories/', payload);
+    return axiosInstance.post('/categories', payload);
 };
 
 export const updateCategory = async (id, payload) => {
-    return axiosInstance.put(`/categories/${id}/`, payload);
+    return axiosInstance.put(`/categories/${id}`, payload);
 };
 
 export const deleteCategory = async (id) => {
-    return axiosInstance.delete(`/categories/${id}/`);
+    return axiosInstance.delete(`/categories/${id}`);
 };
