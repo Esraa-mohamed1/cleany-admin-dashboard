@@ -3,12 +3,7 @@
 import axiosInstance from '../axios';
 import axios from 'axios';
 
-const fallbackCategoryCompanies = [
-    { id: 1, name: 'Retail' },
-    { id: 2, name: 'Services' },
-    { id: 3, name: 'Logistics' },
-    { id: 4, name: 'Technology' },
-];
+const fallbackCategoryCompanies = [];
 
 let fallbackMode = false;
 let localCategoryCompaniesStore = [...fallbackCategoryCompanies];
@@ -17,7 +12,11 @@ const normalizeCategory = (item, index) => {
     const record = item && typeof item === 'object' ? item : {};
     return {
         id: record.id || record.category_company_id || record.pk || index + 1,
-        name: record.name || record.title || record.category_name || `Category ${index + 1}`,
+        company_id: record.company_id || '',
+        category_id: record.category_id || '',
+        region_id: record.region_id || '',
+        company_name: record.company?.name || record.company_name || `Company ${record.company_id || ''}`,
+        category_name: record.category?.name || record.category_name || `Category ${record.category_id || ''}`,
     };
 };
 
@@ -61,7 +60,7 @@ export const getCategoryCompanies = async () => {
     }
 
     try {
-        const response = await axiosInstance.get('/category_companies/');
+        const response = await axiosInstance.get('/category_companies');
         const list = extractCategoryCompaniesArray(response.data).map((item, index) =>
             normalizeCategory(item, index),
         );
@@ -95,7 +94,7 @@ export const createCategoryCompany = async (payload) => {
     }
 
     try {
-        return await axiosInstance.post('/category_companies/', payload);
+        return await axiosInstance.post('/category_companies', payload);
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
             fallbackMode = true;
@@ -114,7 +113,7 @@ export const updateCategoryCompany = async (id, payload) => {
     }
 
     try {
-        return await axiosInstance.put(`/category_companies/${id}/`, payload);
+        return await axiosInstance.put(`/category_companies/${id}`, payload);
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
             fallbackMode = true;
@@ -131,7 +130,7 @@ export const deleteCategoryCompany = async (id) => {
     }
 
     try {
-        return await axiosInstance.delete(`/category_companies/${id}/`);
+        return await axiosInstance.delete(`/category_companies/${id}`);
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
             fallbackMode = true;

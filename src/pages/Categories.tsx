@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    getCompanies,
+} from '../api/endpoints/companies';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -13,6 +16,11 @@ import {
     getCategoryCompanies,
     updateCategoryCompany,
 } from '../api/endpoints/categoryCompanies';
+
+type Company = {
+    id: number;
+    name: string;
+};
 
 type Category = {
     id: number;
@@ -30,7 +38,11 @@ type CategoryFormState = {
 
 type CompanyCategory = {
     id: number;
-    name: string;
+    company_id: string | number;
+    category_id: string | number;
+    region_id?: string | number;
+    company_name: string;
+    category_name: string;
 };
 
 type ToastType = 'success' | 'error';
@@ -53,7 +65,10 @@ const Categories: React.FC = () => {
     const [companyCategories, setCompanyCategories] = useState<CompanyCategory[]>([]);
     const [isCompanyCategoryModalOpen, setIsCompanyCategoryModalOpen] = useState(false);
     const [editingCompanyCategoryId, setEditingCompanyCategoryId] = useState<number | null>(null);
-    const [companyCategoryName, setCompanyCategoryName] = useState('');
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [companyCategoryCompanyId, setCompanyCategoryCompanyId] = useState('');
+    const [companyCategoryCategoryId, setCompanyCategoryCategoryId] = useState('');
+    const [companyCategoryRegionId, setCompanyCategoryRegionId] = useState('');
     const [formState, setFormState] = useState<CategoryFormState>(emptyForm);
     const [toastMessage, setToastMessage] = useState('');
     const [toastType, setToastType] = useState<ToastType>('success');
@@ -148,6 +163,15 @@ const Categories: React.FC = () => {
         }
     };
 
+    const fetchCompaniesList = async () => {
+        try {
+            const { list } = await getCompanies();
+            setCompanies(list as Company[]);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const fetchCompanyCategories = async () => {
         setCompanyCategoriesLoading(true);
         try {
@@ -163,6 +187,7 @@ const Categories: React.FC = () => {
     useEffect(() => {
         fetchCategories();
         fetchCompanyCategories();
+        fetchCompaniesList();
     }, []);
 
     const openAddModal = () => {
@@ -194,20 +219,26 @@ const Categories: React.FC = () => {
 
     const openAddCompanyCategoryModal = () => {
         setEditingCompanyCategoryId(null);
-        setCompanyCategoryName('');
+        setCompanyCategoryCompanyId('');
+        setCompanyCategoryCategoryId('');
+        setCompanyCategoryRegionId('');
         setIsCompanyCategoryModalOpen(true);
     };
 
     const openEditCompanyCategoryModal = (category: CompanyCategory) => {
         setEditingCompanyCategoryId(category.id);
-        setCompanyCategoryName(category.name);
+        setCompanyCategoryCompanyId(String(category.company_id || ''));
+        setCompanyCategoryCategoryId(String(category.category_id || ''));
+        setCompanyCategoryRegionId(String(category.region_id || ''));
         setIsCompanyCategoryModalOpen(true);
     };
 
     const closeCompanyCategoryModal = () => {
         setIsCompanyCategoryModalOpen(false);
         setEditingCompanyCategoryId(null);
-        setCompanyCategoryName('');
+        setCompanyCategoryCompanyId('');
+        setCompanyCategoryCategoryId('');
+        setCompanyCategoryRegionId('');
     };
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -283,18 +314,24 @@ const Categories: React.FC = () => {
     const handleCompanyCategorySubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        const trimmedName = companyCategoryName.trim();
-        if (!trimmedName) {
+        if (!companyCategoryCompanyId || !companyCategoryCategoryId) {
+            showToast('Please select a company and a category.', 'error');
             return;
         }
 
+        const payload = {
+            company_id: Number(companyCategoryCompanyId),
+            category_id: Number(companyCategoryCategoryId),
+            ...(companyCategoryRegionId ? { region_id: Number(companyCategoryRegionId) } : {})
+        };
+
         try {
             if (editingCompanyCategoryId === null) {
-                await createCategoryCompany({ name: trimmedName });
-                showToast('Company category added successfully');
+                await createCategoryCompany(payload);
+                showToast('Company category assigned successfully');
             } else {
-                await updateCategoryCompany(editingCompanyCategoryId, { name: trimmedName });
-                showToast('Company category updated successfully');
+                await updateCategoryCompany(editingCompanyCategoryId, payload);
+                showToast('Company category assignment updated successfully');
             }
 
             closeCompanyCategoryModal();
@@ -305,7 +342,7 @@ const Categories: React.FC = () => {
     };
 
     const handleDeleteCompanyCategory = async (category: CompanyCategory) => {
-        const confirmed = window.confirm(`Delete company category "${category.name}"?`);
+        const confirmed = window.confirm(`Delete company assignment for "${category.company_name}"?`);
         if (!confirmed) {
             return;
         }
@@ -402,7 +439,9 @@ const Categories: React.FC = () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
+                                <th>Company</th>
+                                <th>Category</th>
+                                <th>Region</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -410,7 +449,9 @@ const Categories: React.FC = () => {
                             {companyCategories.map((category) => (
                                 <tr key={`company-category-${category.id}`}>
                                     <td>{category.id}</td>
-                                    <td>{category.name}</td>
+                                    <td>{category.company_name || category.company_id}</td>
+                                    <td>{category.category_name || category.category_id}</td>
+                                    <td>{category.region_id || '-'}</td>
                                     <td>
                                         <div className="crud-actions">
                                             <button
@@ -544,14 +585,36 @@ const Categories: React.FC = () => {
 
                         <form className="crud-form" onSubmit={handleCompanyCategorySubmit}>
                             <label className="crud-field">
-                                <span>Name</span>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={companyCategoryName}
-                                    onChange={(event) => setCompanyCategoryName(event.target.value)}
-                                    placeholder="Enter company category name"
+                                <span>Company</span>
+                                <select 
+                                    value={companyCategoryCompanyId} 
+                                    onChange={(e) => setCompanyCategoryCompanyId(e.target.value)}
                                     required
+                                >
+                                    <option value="">Select Company</option>
+                                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </label>
+                            
+                            <label className="crud-field">
+                                <span>Category</span>
+                                <select 
+                                    value={companyCategoryCategoryId} 
+                                    onChange={(e) => setCompanyCategoryCategoryId(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select Category</option>
+                                    {data.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </label>
+
+                            <label className="crud-field">
+                                <span>Region ID (Optional)</span>
+                                <input
+                                    type="number"
+                                    value={companyCategoryRegionId}
+                                    onChange={(event) => setCompanyCategoryRegionId(event.target.value)}
+                                    placeholder="Enter Region ID"
                                 />
                             </label>
 
