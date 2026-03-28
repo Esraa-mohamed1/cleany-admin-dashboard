@@ -1,4 +1,4 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../axios';
 
 export const getBookings = async (params = {}) => {
     const response = await axiosInstance.get('/bookings', { params });
@@ -6,6 +6,16 @@ export const getBookings = async (params = {}) => {
         list: response.data.data,
         meta: response.data.meta
     };
+};
+
+export const createBooking = async (payload) => {
+    const response = await axiosInstance.post('/bookings', payload);
+    return response.data;
+};
+
+export const updateBooking = async (id, payload) => {
+    const response = await axiosInstance.put(`/bookings/${id}`, payload);
+    return response.data;
 };
 
 export const deleteBooking = async (id) => {

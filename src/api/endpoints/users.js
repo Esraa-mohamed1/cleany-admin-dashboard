@@ -7,7 +7,7 @@ const fallbackUsers = [
     {
         id: 1,
         name: 'Ava Cooper',
-        email: 'ava.cooper@clean4.io',
+        email: 'ava.cooper@cleany.io',
         phone: '+1 415 222 1456',
         role: 'Admin',
         status: 'Active',
@@ -15,7 +15,7 @@ const fallbackUsers = [
     {
         id: 2,
         name: 'Liam Stone',
-        email: 'liam.stone@clean4.io',
+        email: 'liam.stone@cleany.io',
         phone: '+1 646 100 4891',
         role: 'Manager',
         status: 'Active',
@@ -23,7 +23,7 @@ const fallbackUsers = [
     {
         id: 3,
         name: 'Noah Patel',
-        email: 'noah.patel@clean4.io',
+        email: 'noah.patel@cleany.io',
         phone: '+1 503 771 9080',
         role: 'Support',
         status: 'Inactive',
