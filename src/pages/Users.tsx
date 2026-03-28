@@ -1,387 +1,123 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import {
-    createUser,
-    deleteUser,
-    getUsers,
-    updateUser,
-} from '../api/endpoints/users';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { createUser, deleteUser, getUsers, updateUser } from '../api/endpoints/users';
+import { confirmDelete, showSuccess, showError } from '../utils/alerts';
 
 type UserStatus = 'Active' | 'Inactive';
+type User = { id: number; name: string; email: string; phone: string; role: string; status: UserStatus; };
+type UserFormState = { name: string; email: string; phone: string; role: string; status: UserStatus; };
 
-type User = {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    role: string;
-    status: UserStatus;
-};
-
-type UserFormState = {
-    name: string;
-    email: string;
-    phone: string;
-    role: string;
-    status: UserStatus;
-};
-
-type ToastType = 'success' | 'error';
-
-const emptyForm: UserFormState = {
-    name: '',
-    email: '',
-    phone: '',
-    role: 'User',
-    status: 'Active',
-};
+const emptyForm: UserFormState = { name: '', email: '', phone: '', role: 'User', status: 'Active', };
 
 const Users: React.FC = () => {
-    const navigate = useNavigate();
     const [data, setData] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [formState, setFormState] = useState<UserFormState>(emptyForm);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastType, setToastType] = useState<ToastType>('success');
-    const toastTimerRef = useRef<number | undefined>(undefined);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        return () => {
-            if (toastTimerRef.current) {
-                window.clearTimeout(toastTimerRef.current);
-            }
-        };
-    }, []);
-
-    const modalTitle = useMemo(
-        () => (editingId === null ? 'Add User' : 'Edit User'),
-        [editingId],
-    );
-
-    const showToast = (message: string, type: ToastType = 'success') => {
-        setToastMessage(message);
-        setToastType(type);
-        if (toastTimerRef.current) {
-            window.clearTimeout(toastTimerRef.current);
-        }
-        toastTimerRef.current = window.setTimeout(() => {
-            setToastMessage('');
-        }, 2200);
-    };
-
-    const stringifyError = (value: unknown): string => {
-        if (typeof value === 'string') {
-            return value;
-        }
-        if (value && typeof value === 'object') {
-            try {
-                return JSON.stringify(value);
-            } catch (_error) {
-                return 'Unexpected error occurred';
-            }
-        }
-        return 'Unexpected error occurred';
-    };
-
-    const handleApiError = (apiError: unknown) => {
-        if (axios.isAxiosError(apiError)) {
-            const status = apiError.response?.status;
-            const detailMessage =
-                (apiError.response?.data as { detail?: string; message?: string } | undefined)?.detail ||
-                (apiError.response?.data as { detail?: string; message?: string } | undefined)?.message ||
-                stringifyError(apiError.response?.data) ||
-                apiError.message;
-
-            if (status === 401) {
-                navigate('/login');
-                return;
-            }
-
-            setError(detailMessage);
-
-            if (status === 404 || status === 500) {
-                showToast('Server request failed. Please try again.', 'error');
-            } else {
-                showToast(detailMessage, 'error');
-            }
-            return;
-        }
-
-        const fallback = 'Unexpected error occurred';
-        setError(fallback);
-        showToast(fallback, 'error');
-    };
-
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async (page = 1) => {
         setLoading(true);
-        setError(null);
         try {
-            const { list } = await getUsers();
+            const { list, meta } = await getUsers({ page });
             setData(list as User[]);
-        } catch (apiError) {
-            handleApiError(apiError);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
+            setTotalPages(meta?.last_page || 1);
+            setCurrentPage(meta?.current_page || 1);
+        } catch (err) { showError('Sync failed'); }
+        finally { setLoading(false); }
     }, []);
 
-    const openAddModal = () => {
-        setEditingId(null);
-        setFormState(emptyForm);
-        setIsModalOpen(true);
+    useEffect(() => { fetchUsers(1); }, [fetchUsers]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormState(p => ({ ...p, [name]: value }));
     };
 
-    const openEditModal = (user: User) => {
-        setEditingId(user.id);
-        setFormState({
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            status: user.status,
-        });
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-        setFormState(emptyForm);
-    };
-
-    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = event.target;
-        setFormState((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        const payload = {
-            name: formState.name.trim(),
-            full_name: formState.name.trim(),
-            username: formState.email.trim().split('@')[0] || formState.name.trim(),
-            email: formState.email.trim(),
-            phone: formState.phone.trim(),
-            role: formState.role.trim(),
-            status: formState.status,
-            is_active: formState.status === 'Active',
-        };
-
-        if (!payload.name || !payload.email || !payload.phone) {
-            return;
-        }
-
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formState.name || !formState.email) return;
         try {
-            if (editingId === null) {
-                await createUser(payload);
-                showToast('User added successfully');
-            } else {
-                await updateUser(editingId, payload);
-                showToast('User updated successfully');
-            }
-
-            closeModal();
-            await fetchUsers();
-        } catch (apiError) {
-            handleApiError(apiError);
-        }
+            const payload = { ...formState, full_name: formState.name, is_active: formState.status === 'Active' };
+            if (editingId) await updateUser(editingId, payload);
+            else await createUser(payload);
+            showSuccess(editingId ? 'User Updated' : 'User Created');
+            setIsModalOpen(false);
+            fetchUsers(currentPage);
+        } catch (err) { showError('Save Failed'); }
     };
 
-    const handleDelete = async (user: User) => {
-        const confirmed = window.confirm(`Delete user "${user.name}"?`);
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            await deleteUser(user.id);
-            showToast('User deleted successfully');
-            await fetchUsers();
-        } catch (apiError) {
-            handleApiError(apiError);
+    const handleDelete = async (u: User) => {
+        if (await confirmDelete(`Delete "${u.name}"?`)) {
+            try {
+                await deleteUser(u.id);
+                showSuccess('User deleted');
+                fetchUsers(currentPage);
+            } catch (err) { showError('Failed'); }
         }
     };
 
     return (
         <section className="cyber-section-card">
             <div className="crud-page-header">
-                <div>
-                    <p className="cyber-page-kicker">Operations</p>
-                    <h1 className="cyber-standalone-title">Users</h1>
-                </div>
-                <button type="button" className="crud-add-button" onClick={openAddModal}>
-                    Add User
-                </button>
+                <div><p className="cyber-page-kicker">Access Control</p><h1 className="cyber-standalone-title">Users</h1></div>
+                <button className="crud-add-button" onClick={() => { setEditingId(null); setFormState(emptyForm); setIsModalOpen(true); }}>+ Create Account</button>
             </div>
 
             <div className="crud-table-wrap">
                 <table className="crud-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>ID</th><th>User</th><th>Contact</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
-                        {data.map((user) => (
-                            <tr key={user.id}>
-                                <td>{user.id}</td>
-                                <td>{user.name}</td>
-                                <td>{user.email}</td>
-                                <td>{user.phone}</td>
-                                <td>{user.role}</td>
+                        {data.map(u => (
+                            <tr key={u.id}>
+                                <td><span className="row-tag">#{u.id}</span></td>
+                                <td><div className="row-main-text">{u.name}</div><div className="row-sub-text">{u.role}</div></td>
+                                <td><div className="row-main-text">{u.email}</div><div className="row-sub-text">{u.phone}</div></td>
+                                <td>{u.role}</td>
                                 <td>
-                                    <span
-                                        className={`crud-status-badge ${
-                                            user.status === 'Active'
-                                                ? 'crud-status-active'
-                                                : 'crud-status-inactive'
-                                        }`}
-                                    >
-                                        {user.status}
+                                    <span className={`crud-status-badge ${u.status === 'Active' ? 'crud-status-active' : 'crud-status-inactive'}`}>
+                                        {u.status}
                                     </span>
                                 </td>
                                 <td>
                                     <div className="crud-actions">
-                                        <button
-                                            type="button"
-                                            className="crud-action-button"
-                                            onClick={() => openEditModal(user)}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="crud-action-button crud-action-danger"
-                                            onClick={() => handleDelete(user)}
-                                        >
-                                            Delete
-                                        </button>
+                                        <button className="crud-action-button" onClick={() => { setEditingId(u.id); setFormState(u); setIsModalOpen(true); }}>Edit</button>
+                                        <button className="crud-action-button crud-action-danger" onClick={() => handleDelete(u)}>Delete</button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                {totalPages > 1 && (
+                    <div className="crud-pagination">
+                        <button disabled={currentPage === 1} onClick={() => fetchUsers(currentPage - 1)}>Prev</button>
+                        <span>{currentPage} / {totalPages}</span>
+                        <button disabled={currentPage === totalPages} onClick={() => fetchUsers(currentPage + 1)}>Next</button>
+                    </div>
+                )}
             </div>
-
-            {loading ? <div className="crud-loading">Loading users...</div> : null}
-            {error ? <div className="crud-error-inline">{error}</div> : null}
-
-            {isModalOpen ? (
-                <div
-                    className="crud-modal-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={modalTitle}
-                    onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                            closeModal();
-                        }
-                    }}
-                >
+            {loading && <div className="crud-loading">Syncing...</div>}
+            {isModalOpen && createPortal(
+                <div className="crud-modal-overlay" onMouseDown={e => e.target === e.currentTarget && setIsModalOpen(false)}>
                     <div className="crud-modal-panel">
-                        <div className="crud-modal-head">
-                            <h2>{modalTitle}</h2>
-                            <button
-                                type="button"
-                                className="crud-modal-close"
-                                onClick={closeModal}
-                                aria-label="Close modal"
-                            >
-                                X
-                            </button>
-                        </div>
+                        <div className="crud-modal-head"><h2>{editingId ? 'Modify' : 'New'} Account</h2><button className="crud-modal-close" onClick={() => setIsModalOpen(false)}>X</button></div>
                         <form className="crud-form" onSubmit={handleSubmit}>
-                            <label className="crud-field">
-                                <span>Name</span>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formState.name}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter full name"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Email</span>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formState.email}
-                                    onChange={handleInputChange}
-                                    placeholder="user@email.com"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Phone</span>
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formState.phone}
-                                    onChange={handleInputChange}
-                                    placeholder="+1 555 111 2233"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Role</span>
-                                <input
-                                    type="text"
-                                    name="role"
-                                    value={formState.role}
-                                    onChange={handleInputChange}
-                                    placeholder="Admin / Manager / Support"
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Status</span>
-                                <select name="status" value={formState.status} onChange={handleInputChange}>
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </select>
-                            </label>
-
-                            <div className="crud-modal-actions">
-                                <button type="button" className="crud-action-button" onClick={closeModal}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="crud-add-button">
-                                    {editingId === null ? 'Create User' : 'Save Changes'}
-                                </button>
+                            <label className="crud-field"><span>Full Name</span><input name="name" value={formState.name} onChange={handleInputChange} required /></label>
+                            <label className="crud-field"><span>Email Identity</span><input type="email" name="email" value={formState.email} onChange={handleInputChange} required /></label>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Phone</span><input name="phone" value={formState.phone} onChange={handleInputChange} /></label>
+                                <label className="crud-field"><span>Role</span><input name="role" value={formState.role} onChange={handleInputChange} /></label>
                             </div>
+                            <label className="crud-field"><span>Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                            <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Changes</button></div>
                         </form>
                     </div>
-                </div>
-            ) : null}
-
-            {toastMessage ? (
-                <div className={toastType === 'error' ? 'crud-toast-error' : 'crud-toast-success'}>
-                    {toastMessage}
-                </div>
-            ) : null}
+                </div>, document.body
+            )}
         </section>
     );
 };
-
 export default Users;

@@ -1,7 +1,7 @@
 import axiosInstance from '../axios';
 
-export const getOffers = async () => {
-    const response = await axiosInstance.get('/offers');
+export const getOffers = async (params = {}) => {
+    const response = await axiosInstance.get('/offers', { params });
     return {
         list: response.data.data,
         meta: response.data.meta,

@@ -100,20 +100,20 @@ const extractUsersArray = (payload) => {
     return [];
 };
 
-export const getUsers = async () => {
+export const getUsers = async (params = {}) => {
     if (fallbackMode) {
         return {
-            raw: { local: true },
             list: [...localUsersStore],
+            meta: { current_page: 1, last_page: 1, total: localUsersStore.length },
         };
     }
 
     try {
-        const response = await axiosInstance.get('/users');
+        const response = await axiosInstance.get('/users', { params });
         const rawList = extractUsersArray(response.data);
         return {
-            raw: response.data,
             list: rawList.map((item, index) => toUser(item, index)),
+            meta: response.data.meta,
         };
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {

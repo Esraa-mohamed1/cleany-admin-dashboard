@@ -2,10 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const navigationGroups = [
-    {
-        label: 'Dashboard',
-        items: [{ label: 'Home', path: '/', icon: '⌂' }],
-    },
+
     {
         label: 'Inside Board',
         items: [
@@ -24,7 +21,7 @@ const Sidebar: React.FC = () => {
         <aside className="sidebar">
             <div>
                 <h2 className="sidebar-brand">
-                    Clean<span>4</span>
+                    Cleany<span> admin</span>
                 </h2>
 
                 <nav aria-label="Sidebar Navigation" className="sidebar-nav">

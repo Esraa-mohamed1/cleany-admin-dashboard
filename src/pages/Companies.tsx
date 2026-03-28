@@ -1,412 +1,134 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import {
-    createCompany,
-    deleteCompany,
-    getCompanies,
-    updateCompany,
-} from '../api/endpoints/companies';
+import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { createCompany, deleteCompany, getCompanies, updateCompany } from '../api/endpoints/companies';
 import { getCategoryCompanies } from '../api/endpoints/categoryCompanies';
+import { confirmDelete, showSuccess, showError } from '../utils/alerts';
 
 type CompanyStatus = 'Active' | 'Inactive';
+type Company = { id: number; name: string; email: string; phone: string; status: CompanyStatus; categoryCompanyId?: number | null; categoryCompanyName?: string; };
+type CompanyCategory = { id: number; name: string; };
+type CompanyFormState = { name: string; email: string; phone: string; status: CompanyStatus; categoryCompanyId: string; };
 
-type Company = {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    status: CompanyStatus;
-    categoryCompanyId?: number | null;
-    categoryCompanyName?: string;
-};
-
-type CompanyCategory = {
-    id: number;
-    name: string;
-};
-
-type CompanyFormState = {
-    name: string;
-    email: string;
-    phone: string;
-    status: CompanyStatus;
-    categoryCompanyId: string;
-};
-
-type ToastType = 'success' | 'error';
-
-const emptyForm: CompanyFormState = {
-    name: '',
-    email: '',
-    phone: '',
-    status: 'Active',
-    categoryCompanyId: '',
-};
+const emptyForm: CompanyFormState = { name: '', email: '', phone: '', status: 'Active', categoryCompanyId: '', };
 
 const Companies: React.FC = () => {
-    const navigate = useNavigate();
     const [data, setData] = useState<Company[]>([]);
     const [companyCategories, setCompanyCategories] = useState<CompanyCategory[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [formState, setFormState] = useState<CompanyFormState>(emptyForm);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastType, setToastType] = useState<ToastType>('success');
-    const toastTimerRef = useRef<number | undefined>(undefined);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        return () => {
-            if (toastTimerRef.current) {
-                window.clearTimeout(toastTimerRef.current);
-            }
-        };
+    const fetchCompanies = useCallback(async (page = 1) => {
+        setLoading(true);
+        try {
+            const { list, meta } = await getCompanies({ page });
+            setData(list as Company[]);
+            setTotalPages(meta?.last_page || 1);
+            setCurrentPage(meta?.current_page || 1);
+        } catch (err) { showError('Sync failed'); }
+        finally { setLoading(false); }
     }, []);
 
-    const modalTitle = useMemo(
-        () => (editingId === null ? 'Add Company' : 'Edit Company'),
-        [editingId],
-    );
-
-    const showToast = (message: string, type: ToastType = 'success') => {
-        setToastMessage(message);
-        setToastType(type);
-        if (toastTimerRef.current) {
-            window.clearTimeout(toastTimerRef.current);
-        }
-        toastTimerRef.current = window.setTimeout(() => {
-            setToastMessage('');
-        }, 2200);
-    };
-
-    const stringifyError = (value: unknown): string => {
-        if (typeof value === 'string') {
-            return value;
-        }
-        if (value && typeof value === 'object') {
-            try {
-                return JSON.stringify(value);
-            } catch (_error) {
-                return 'Unexpected error occurred';
-            }
-        }
-        return 'Unexpected error occurred';
-    };
-
-    const handleApiError = (apiError: unknown) => {
-        if (axios.isAxiosError(apiError)) {
-            const status = apiError.response?.status;
-            const detailMessage =
-                (apiError.response?.data as { detail?: string; message?: string } | undefined)?.detail ||
-                (apiError.response?.data as { detail?: string; message?: string } | undefined)?.message ||
-                stringifyError(apiError.response?.data) ||
-                apiError.message;
-
-            if (status === 401) {
-                navigate('/login');
-                return;
-            }
-
-            setError(detailMessage);
-
-            if (status === 404 || status === 500) {
-                showToast('Server request failed. Please try again.', 'error');
-            } else {
-                showToast(detailMessage, 'error');
-            }
-            return;
-        }
-
-        const fallback = 'Unexpected error occurred';
-        setError(fallback);
-        showToast(fallback, 'error');
-    };
-
-    const fetchCompanies = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const { list } = await getCompanies();
-            setData(list as Company[]);
-        } catch (apiError) {
-            handleApiError(apiError);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCompanyCategories = async () => {
+    const fetchCompanyCategories = useCallback(async () => {
         try {
             const { list } = await getCategoryCompanies();
             setCompanyCategories(list as CompanyCategory[]);
-        } catch (apiError) {
-            handleApiError(apiError);
-        }
-    };
-
-    useEffect(() => {
-        fetchCompanies();
-        fetchCompanyCategories();
+        } catch (err) { console.error(err); }
     }, []);
 
-    const openAddModal = () => {
-        setEditingId(null);
-        setFormState(emptyForm);
-        setIsModalOpen(true);
+    useEffect(() => {
+        fetchCompanies(1);
+        fetchCompanyCategories();
+    }, [fetchCompanies, fetchCompanyCategories]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormState(p => ({ ...p, [name]: value }));
     };
 
-    const openEditModal = (company: Company) => {
-        setEditingId(company.id);
-        setFormState({
-            name: company.name,
-            email: company.email,
-            phone: company.phone,
-            status: company.status,
-            categoryCompanyId: company.categoryCompanyId ? String(company.categoryCompanyId) : '',
-        });
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-        setFormState(emptyForm);
-    };
-
-    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = event.target;
-        setFormState((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        const payload = {
-            name: formState.name.trim(),
-            email: formState.email.trim(),
-            phone: formState.phone.trim(),
-            status: formState.status,
-            ...(formState.categoryCompanyId
-                ? {
-                      category_company: Number(formState.categoryCompanyId),
-                      category_company_id: Number(formState.categoryCompanyId),
-                  }
-                : {}),
-        };
-
-        if (!payload.name || !payload.email || !payload.phone) {
-            return;
-        }
-
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         try {
-            if (editingId === null) {
-                await createCompany(payload);
-                showToast('Company added successfully');
-            } else {
-                await updateCompany(editingId, payload);
-                showToast('Company updated successfully');
-            }
-
-            closeModal();
-            await fetchCompanies();
-        } catch (apiError) {
-            handleApiError(apiError);
-        }
+            const payload = { ...formState, category_company_id: Number(formState.categoryCompanyId) };
+            if (editingId) await updateCompany(editingId, payload);
+            else await createCompany(payload);
+            showSuccess(editingId ? 'Updated' : 'Added');
+            setIsModalOpen(false);
+            fetchCompanies(currentPage);
+        } catch (err) { showError('Save Failed'); }
     };
 
-    const handleDelete = async (company: Company) => {
-        const confirmed = window.confirm(`Delete company "${company.name}"?`);
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            await deleteCompany(company.id);
-            showToast('Company deleted successfully');
-            await fetchCompanies();
-        } catch (apiError) {
-            handleApiError(apiError);
+    const handleDelete = async (comp: Company) => {
+        if (await confirmDelete(`Wipe "${comp.name}"?`)) {
+            try {
+                await deleteCompany(comp.id);
+                showSuccess('Purged');
+                fetchCompanies(currentPage);
+            } catch (err) { showError('Failed'); }
         }
     };
 
     return (
         <section className="cyber-section-card">
             <div className="crud-page-header">
-                <div>
-                    <p className="cyber-page-kicker">Operations</p>
-                    <h1 className="cyber-standalone-title">Companies</h1>
-                </div>
-                <button type="button" className="crud-add-button" onClick={openAddModal}>
-                    Add Company
-                </button>
+                <div><p className="cyber-page-kicker">Managed Partners</p><h1 className="cyber-standalone-title">Companies</h1></div>
+                <button className="crud-add-button" onClick={() => { setEditingId(null); setFormState(emptyForm); setIsModalOpen(true); }}>+ Onboard Company</button>
             </div>
 
             <div className="crud-table-wrap">
                 <table className="crud-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Company Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>ID</th><th>Organization</th><th>Identity</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
-                        {data.map((company) => (
-                            <tr key={company.id}>
-                                <td>{company.id}</td>
-                                <td>{company.name}</td>
-                                <td>{company.email}</td>
-                                <td>{company.phone}</td>
-                                <td>{company.categoryCompanyName || 'Unassigned'}</td>
-                                <td>
-                                    <span
-                                        className={`crud-status-badge ${
-                                            company.status === 'Active'
-                                                ? 'crud-status-active'
-                                                : 'crud-status-inactive'
-                                        }`}
-                                    >
-                                        {company.status}
-                                    </span>
-                                </td>
+                        {data.map(comp => (
+                            <tr key={comp.id}>
+                                <td><span className="row-tag">#{comp.id}</span></td>
+                                <td><div className="row-main-text">{comp.name}</div><div className="row-sub-text">{comp.phone}</div></td>
+                                <td><div className="row-main-text">{comp.email}</div></td>
+                                <td><div className="row-tag">{comp.categoryCompanyName || 'General'}</div></td>
+                                <td><span className={`crud-status-badge ${comp.status === 'Active' ? 'crud-status-active' : 'crud-status-inactive'}`}>{comp.status}</span></td>
                                 <td>
                                     <div className="crud-actions">
-                                        <button
-                                            type="button"
-                                            className="crud-action-button"
-                                            onClick={() => openEditModal(company)}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="crud-action-button crud-action-danger"
-                                            onClick={() => handleDelete(company)}
-                                        >
-                                            Delete
-                                        </button>
+                                        <button className="crud-action-button" onClick={() => { setEditingId(comp.id); setFormState({ ...comp, categoryCompanyId: comp.categoryCompanyId ? String(comp.categoryCompanyId) : '' }); setIsModalOpen(true); }}>Edit</button>
+                                        <button className="crud-action-button crud-action-danger" onClick={() => handleDelete(comp)}>Delete</button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                {totalPages > 1 && (
+                    <div className="crud-pagination">
+                        <button disabled={currentPage === 1} onClick={() => fetchCompanies(currentPage - 1)}>Prev</button>
+                        <span>{currentPage} / {totalPages}</span>
+                        <button disabled={currentPage === totalPages} onClick={() => fetchCompanies(currentPage + 1)}>Next</button>
+                    </div>
+                )}
             </div>
+            {loading && <div className="crud-loading">Syncing Registry...</div>}
 
-            {loading ? <div className="crud-loading">Loading companies...</div> : null}
-            {error ? <div className="crud-error-inline">{error}</div> : null}
-
-            {isModalOpen ? (
-                <div
-                    className="crud-modal-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={modalTitle}
-                    onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                            closeModal();
-                        }
-                    }}
-                >
+            {isModalOpen && createPortal(
+                <div className="crud-modal-overlay" onMouseDown={e => e.target === e.currentTarget && setIsModalOpen(false)}>
                     <div className="crud-modal-panel">
-                        <div className="crud-modal-head">
-                            <h2>{modalTitle}</h2>
-                            <button
-                                type="button"
-                                className="crud-modal-close"
-                                onClick={closeModal}
-                                aria-label="Close modal"
-                            >
-                                X
-                            </button>
-                        </div>
+                        <div className="crud-modal-head"><h2>{editingId ? 'Modify' : 'Onboard'} Partner</h2><button className="crud-modal-close" onClick={() => setIsModalOpen(false)}>X</button></div>
                         <form className="crud-form" onSubmit={handleSubmit}>
-                            <label className="crud-field">
-                                <span>Company Name</span>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formState.name}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter company name"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Email</span>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formState.email}
-                                    onChange={handleInputChange}
-                                    placeholder="company@email.com"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Phone</span>
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formState.phone}
-                                    onChange={handleInputChange}
-                                    placeholder="+1 555 111 2233"
-                                    required
-                                />
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Status</span>
-                                <select name="status" value={formState.status} onChange={handleInputChange}>
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </select>
-                            </label>
-
-                            <label className="crud-field">
-                                <span>Company Category</span>
-                                <select
-                                    name="categoryCompanyId"
-                                    value={formState.categoryCompanyId}
-                                    onChange={handleInputChange}
-                                >
-                                    <option value="">Select category</option>
-                                    {companyCategories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <div className="crud-modal-actions">
-                                <button type="button" className="crud-action-button" onClick={closeModal}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="crud-add-button">
-                                    {editingId === null ? 'Create Company' : 'Save Changes'}
-                                </button>
+                            <label className="crud-field"><span>Full Legal Name</span><input name="name" value={formState.name} onChange={handleInputChange} required /></label>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Business Email</span><input type="email" name="email" value={formState.email} onChange={handleInputChange} required /></label>
+                                <label className="crud-field"><span>Support Phone</span><input name="phone" value={formState.phone} onChange={handleInputChange} required /></label>
                             </div>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Operational Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                                <label className="crud-field"><span>Service Stream</span><select name="categoryCompanyId" value={formState.categoryCompanyId} onChange={handleInputChange}><option value="">Select Stream</option>{companyCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                            </div>
+                            <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Registry</button></div>
                         </form>
                     </div>
-                </div>
-            ) : null}
-
-            {toastMessage ? (
-                <div className={toastType === 'error' ? 'crud-toast-error' : 'crud-toast-success'}>
-                    {toastMessage}
-                </div>
-            ) : null}
+                </div>, document.body
+            )}
         </section>
     );
 };
-
 export default Companies;

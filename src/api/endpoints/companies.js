@@ -95,20 +95,20 @@ export const extractCompaniesArray = (payload) => {
     return [];
 };
 
-export const getCompanies = async () => {
+export const getCompanies = async (params = {}) => {
     if (fallbackMode) {
         return {
-            raw: { local: true },
             list: [...localCompaniesStore],
+            meta: { current_page: 1, last_page: 1, total: localCompaniesStore.length },
         };
     }
 
     try {
-        const response = await axiosInstance.get('/companies');
+        const response = await axiosInstance.get('/companies', { params });
         const rawList = extractCompaniesArray(response.data);
         return {
-            raw: response.data,
             list: rawList.map((item, index) => toCompany(item, index)),
+            meta: response.data.meta,
         };
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
