@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 // Standard SweetAlert2 without react-content (which depends on React 18)
 // This fixes the 'react-dom/client' not found error in React 17 projects.
 
-export const confirmDelete = async (title: string, text = "This action cannot be undone!") => {
+export const confirmDelete = async (title: string, text = "This action cannot be undone!"): Promise<boolean> => {
     const result = await Swal.fire({
         title,
         text,
@@ -25,7 +25,7 @@ export const confirmDelete = async (title: string, text = "This action cannot be
     return result.isConfirmed;
 };
 
-export const showSuccess = (title: string, text?: string) => {
+export const showSuccess = (title: string, text?: string): void => {
     Swal.fire({
         title,
         text,
@@ -40,7 +40,7 @@ export const showSuccess = (title: string, text?: string) => {
     });
 };
 
-export const showError = (title: string, text?: string) => {
+export const showError = (title: string, text?: string): void => {
     Swal.fire({
         title,
         text,
