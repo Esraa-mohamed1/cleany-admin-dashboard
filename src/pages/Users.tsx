@@ -109,7 +109,7 @@ const Users: React.FC = () => {
                             <label className="crud-field"><span>Email Identity</span><input type="email" name="email" value={formState.email} onChange={handleInputChange} required /></label>
                             <div className="form-grid">
                                 <label className="crud-field"><span>Phone</span><input name="phone" value={formState.phone} onChange={handleInputChange} /></label>
-                                <label className="crud-field"><span>Role</span><input name="role" value={formState.role} onChange={handleInputChange} /></label>
+                                <label className="crud-field"><span>Role</span><select name="role" value={formState.role} onChange={handleInputChange}><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="Staff">Staff</option><option value="User">User</option></select></label>
                             </div>
                             <label className="crud-field"><span>Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
                             <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Changes</button></div>

@@ -274,7 +274,7 @@ const Offers: React.FC = () => {
                                 <input name="title" value={formState.title} onChange={handleInputChange} className={errors.title ? 'error' : ''} />
                                 {errors.title && <span className="field-error">{errors.title}</span>}
                             </label>
-                            <label className="crud-field"><span>Description</span><textarea name="description" value={formState.description} onChange={handleInputChange} rows={2} /></label>
+                            <label className="crud-field"><span>Description</span><textarea name="description" value={formState.description} onChange={handleInputChange} rows={2} className="description-styled" /></label>
                             <div className="form-grid">
                                 <label className="crud-field"><span>Status</span><select name="is_active" value={formState.is_active} onChange={handleInputChange}><option value={1}>Active</option><option value={0}>Inactive</option></select></label>
                                 <label className="crud-field"><span>Company</span><select name="company_id" value={formState.company_id} onChange={handleInputChange}><option value="">None (Public)</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>

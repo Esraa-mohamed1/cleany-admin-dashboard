@@ -5,11 +5,11 @@ import { getCategoryCompanies } from '../api/endpoints/categoryCompanies';
 import { confirmDelete, showSuccess, showError } from '../utils/alerts';
 
 type CompanyStatus = 'Active' | 'Inactive';
-type Company = { id: number; name: string; email: string; phone: string; status: CompanyStatus; categoryCompanyId?: number | null; categoryCompanyName?: string; };
+type Company = { id: number; name: string; email: string; phone: string; status: CompanyStatus; description: string; categoryCompanyId?: number | null; categoryCompanyName?: string; };
 type CompanyCategory = { id: number; name: string; };
-type CompanyFormState = { name: string; email: string; phone: string; status: CompanyStatus; categoryCompanyId: string; };
+type CompanyFormState = { name: string; email: string; phone: string; status: CompanyStatus; description: string; categoryCompanyId: string; };
 
-const emptyForm: CompanyFormState = { name: '', email: '', phone: '', status: 'Active', categoryCompanyId: '', };
+const emptyForm: CompanyFormState = { name: '', email: '', phone: '', status: 'Active', description: '', categoryCompanyId: '', };
 
 const Companies: React.FC = () => {
     const [data, setData] = useState<Company[]>([]);
@@ -44,7 +44,7 @@ const Companies: React.FC = () => {
         fetchCompanyCategories();
     }, [fetchCompanies, fetchCompanyCategories]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormState(p => ({ ...p, [name]: value }));
     };
@@ -85,7 +85,11 @@ const Companies: React.FC = () => {
                         {data.map(comp => (
                             <tr key={comp.id}>
                                 <td><span className="row-tag">#{comp.id}</span></td>
-                                <td><div className="row-main-text">{comp.name}</div><div className="row-sub-text">{comp.phone}</div></td>
+                                <td>
+                                    <div className="row-main-text">{comp.name}</div>
+                                    <div className="row-sub-text">{comp.phone}</div>
+                                    <div className="row-sub-text" style={{ fontStyle: 'italic', marginTop: '4px' }}>{comp.description}</div>
+                                </td>
                                 <td><div className="row-main-text">{comp.email}</div></td>
                                 <td><div className="row-tag">{comp.categoryCompanyName || 'General'}</div></td>
                                 <td><span className={`crud-status-badge ${comp.status === 'Active' ? 'crud-status-active' : 'crud-status-inactive'}`}>{comp.status}</span></td>
@@ -123,6 +127,7 @@ const Companies: React.FC = () => {
                                 <label className="crud-field"><span>Operational Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
                                 <label className="crud-field"><span>Service Stream</span><select name="categoryCompanyId" value={formState.categoryCompanyId} onChange={handleInputChange}><option value="">Select Stream</option>{companyCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                             </div>
+                            <label className="crud-field"><span>Description Label</span><textarea name="description" value={formState.description} onChange={handleInputChange} className="description-styled" placeholder="Company mission or details..." /></label>
                             <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Registry</button></div>
                         </form>
                     </div>

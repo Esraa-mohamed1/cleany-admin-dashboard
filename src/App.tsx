@@ -10,24 +10,35 @@ import Offers from './pages/Offers';
 import Transactions from './pages/Transactions';
 import Users from './pages/Users';
 import Login from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 import './assets/styles/global.css';
 
 const App: React.FC = () => {
     return (
         <BrowserRouter>
-            <MainLayout navbar={<Navbar />}>
-                <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/bookings" element={<Bookings />} />
-                    <Route path="/companies" element={<Companies />} />
-                    <Route path="/categories" element={<Categories />} />
-                    <Route path="/offers" element={<Offers />} />
-                    <Route path="/transactions" element={<Transactions />} />
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </MainLayout>
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                
+                <Route
+                    path="/*"
+                    element={
+                        <ProtectedRoute>
+                            <MainLayout navbar={<Navbar />}>
+                                <Routes>
+                                    <Route path="/" element={<Dashboard />} />
+                                    <Route path="/bookings" element={<Bookings />} />
+                                    <Route path="/companies" element={<Companies />} />
+                                    <Route path="/categories" element={<Categories />} />
+                                    <Route path="/offers" element={<Offers />} />
+                                    <Route path="/transactions" element={<Transactions />} />
+                                    <Route path="/users" element={<Users />} />
+                                    <Route path="*" element={<Navigate to="/" replace />} />
+                                </Routes>
+                            </MainLayout>
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
         </BrowserRouter>
     );
 };

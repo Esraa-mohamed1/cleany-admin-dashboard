@@ -21,7 +21,7 @@ const Sidebar: React.FC = () => {
         <aside className="sidebar">
             <div>
                 <h2 className="sidebar-brand">
-                    Cleany<span> admin</span>
+                    Cleany<span> Dashboard</span>
                 </h2>
 
                 <nav aria-label="Sidebar Navigation" className="sidebar-nav">
