@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import Cookies from 'js-cookie';
 import { createCompany, deleteCompany, getCompanies, updateCompany } from '../api/endpoints/companies';
 import { getCategoryCompanies } from '../api/endpoints/categoryCompanies';
 import { confirmDelete, showSuccess, showError } from '../utils/alerts';
@@ -7,9 +8,9 @@ import { confirmDelete, showSuccess, showError } from '../utils/alerts';
 type CompanyStatus = 'Active' | 'Inactive';
 type Company = { id: number; name: string; email: string; phone: string; status: CompanyStatus; description: string; categoryCompanyId?: number | null; categoryCompanyName?: string; };
 type CompanyCategory = { id: number; name: string; };
-type CompanyFormState = { name: string; email: string; phone: string; status: CompanyStatus; description: string; categoryCompanyId: string; };
+type CompanyFormState = { name: string; email: string; phone: string; status: CompanyStatus; description: string; categoryCompanyId: string; logo: File | string | null; rating: string; is_verified: string; };
 
-const emptyForm: CompanyFormState = { name: '', email: '', phone: '', status: 'Active', description: '', categoryCompanyId: '', };
+const emptyForm: CompanyFormState = { name: '', email: '', phone: '', status: 'Active', description: '', categoryCompanyId: '', logo: null, rating: '', is_verified: '1', };
 
 const Companies: React.FC = () => {
     const [data, setData] = useState<Company[]>([]);
@@ -49,16 +50,34 @@ const Companies: React.FC = () => {
         setFormState(p => ({ ...p, [name]: value }));
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name } = e.target;
+        const file = e.target.files?.[0] || null;
+        setFormState(p => ({ ...p, [name]: file }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const payload = { ...formState, category_company_id: Number(formState.categoryCompanyId) };
+            const payload = new FormData();
+            Object.entries(formState).forEach(([k, v]) => {
+                if (k === 'categoryCompanyId') payload.append('category_company_id', String(v));
+                else if (v !== null && v !== '') payload.append(k, v instanceof window.File ? v : String(v));
+            });
+            payload.append('admin_id', Cookies.get('admin_id') || '1');
             if (editingId) await updateCompany(editingId, payload);
             else await createCompany(payload);
             showSuccess(editingId ? 'Updated' : 'Added');
             setIsModalOpen(false);
             fetchCompanies(currentPage);
-        } catch (err) { showError('Save Failed'); }
+        } catch (err: any) {
+            if (err.response?.data?.error) {
+                const msgs = Object.values(err.response.data.error).flat().join(' | ');
+                showError(msgs);
+            } else {
+                showError(err.response?.data?.message || 'Save Failed');
+            }
+        }
     };
 
     const handleDelete = async (comp: Company) => {
@@ -95,7 +114,7 @@ const Companies: React.FC = () => {
                                 <td><span className={`crud-status-badge ${comp.status === 'Active' ? 'crud-status-active' : 'crud-status-inactive'}`}>{comp.status}</span></td>
                                 <td>
                                     <div className="crud-actions">
-                                        <button className="crud-action-button" onClick={() => { setEditingId(comp.id); setFormState({ ...comp, categoryCompanyId: comp.categoryCompanyId ? String(comp.categoryCompanyId) : '' }); setIsModalOpen(true); }}>Edit</button>
+                                        <button className="crud-action-button" onClick={() => { setEditingId(comp.id); setFormState({ ...comp, categoryCompanyId: comp.categoryCompanyId ? String(comp.categoryCompanyId) : '', logo: null, rating: '5', is_verified: '1' } as any); setIsModalOpen(true); }}>Edit</button>
                                         <button className="crud-action-button crud-action-danger" onClick={() => handleDelete(comp)}>Delete</button>
                                     </div>
                                 </td>
@@ -124,10 +143,15 @@ const Companies: React.FC = () => {
                                 <label className="crud-field"><span>Support Phone</span><input name="phone" value={formState.phone} onChange={handleInputChange} required /></label>
                             </div>
                             <div className="form-grid">
-                                <label className="crud-field"><span>Operational Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
-                                <label className="crud-field"><span>Service Stream</span><select name="categoryCompanyId" value={formState.categoryCompanyId} onChange={handleInputChange}><option value="">Select Stream</option>{companyCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                                <label className="crud-field"><span>Logo (Image)</span><input type="file" className="crud-file-input" name="logo" onChange={handleFileChange} accept="image/*" required={!editingId} /></label>
+                                <label className="crud-field"><span>Rating (0-5)</span><input type="number" step="0.1" name="rating" value={formState.rating} onChange={handleInputChange} required /></label>
                             </div>
-                            <label className="crud-field"><span>Description Label</span><textarea name="description" value={formState.description} onChange={handleInputChange} className="description-styled" placeholder="Company mission or details..." /></label>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Operational Status</span><select name="status" value={formState.status} onChange={handleInputChange} required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                                <label className="crud-field"><span>Service Stream</span><select name="categoryCompanyId" value={formState.categoryCompanyId} onChange={handleInputChange} required><option value="">Select Stream</option>{companyCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                            </div>
+                            <label className="crud-field"><span>Is Verified?</span><select name="is_verified" value={formState.is_verified} onChange={handleInputChange} required><option value="1">Yes</option><option value="0">No</option></select></label>
+                            <label className="crud-field"><span>Description Label</span><textarea name="description" value={formState.description} onChange={handleInputChange} className="description-styled" placeholder="Company mission or details..." required /></label>
                             <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Registry</button></div>
                         </form>
                     </div>

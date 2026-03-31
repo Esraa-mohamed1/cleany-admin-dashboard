@@ -15,13 +15,14 @@ type Booking = {
 type Option = { id: number; name: string };
 type BookingFormState = {
     user_id: string; company_id: string; service_id: string; booking_date: string; start_time: string;
-    hours: string; status: string; payment_status: string; payment_method: string; address: string;
-    notes: string; staff_id: string;
+    end_time: string; hours: string; unit_price: string; discount_applied: string; total_price: string;
+    status: string; payment_status: string; payment_method: string; address: string; notes: string; staff_id: string;
 };
 
 const emptyForm: BookingFormState = {
     user_id: '', company_id: '', service_id: '1', booking_date: '', start_time: '',
-    hours: '1', status: 'pending', payment_status: 'unpaid', payment_method: 'cash', address: '',
+    end_time: '', hours: '1', unit_price: '0', discount_applied: '0', total_price: '0',
+    status: 'pending', payment_status: 'unpaid', payment_method: 'card', address: '',
     notes: '', staff_id: '',
 };
 
@@ -79,7 +80,14 @@ const Bookings: React.FC = () => {
             showSuccess(editingId ? 'Updated' : 'Created');
             setIsModalOpen(false);
             fetchBookings(currentPage);
-        } catch (error) { showError('Failed'); }
+        } catch (error: any) {
+            if (error.response?.data?.error) {
+                const msgs = Object.values(error.response.data.error).flat().join(' | ');
+                showError(msgs);
+            } else {
+                showError(error.response?.data?.message || 'Failed');
+            }
+        }
     };
 
     const handleDelete = async (b: Booking) => {
@@ -104,7 +112,6 @@ const Bookings: React.FC = () => {
         <section className="cyber-section-card">
             <div className="crud-page-header">
                 <div><p className="cyber-page-kicker">Ops Hub</p><h1 className="cyber-standalone-title">Bookings</h1></div>
-                <button className="crud-add-button" onClick={() => { setEditingId(null); setFormState(emptyForm); setErrors({}); setIsModalOpen(true); }}>+ New Booking</button>
             </div>
 
             <div className="crud-filters-row">
@@ -148,7 +155,11 @@ const Bookings: React.FC = () => {
             service_id: String(b.service_id),
             booking_date: b.booking_date,
             start_time: b.start_time,
+            end_time: b.end_time || '',
             hours: String(b.hours),
+            unit_price: String(b.unit_price || 0),
+            discount_applied: String(b.discount_applied || 0),
+            total_price: String(b.total_price || 0),
             status: b.status,
             payment_status: b.payment_status,
             payment_method: b.payment_method,
@@ -178,13 +189,25 @@ const Bookings: React.FC = () => {
                         <div className="crud-modal-head"><h2>{editingId ? 'Edit' : 'New'} Booking</h2><button className="crud-modal-close" onClick={() => setIsModalOpen(false)}>X</button></div>
                         <form className="crud-form" onSubmit={handleSubmit}>
                             <div className="form-grid">
+                                <label className="crud-field"><span>User ID</span><input type="number" name="user_id" value={formState.user_id} onChange={handleInputChange} required /></label>
                                 <label className="crud-field"><span>Company</span><select name="company_id" value={formState.company_id} onChange={handleInputChange}>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                            </div>
+                            <div className="form-grid">
                                 <label className="crud-field"><span>Date</span><input type="date" name="booking_date" value={formState.booking_date} onChange={handleInputChange} /></label>
-                                <label className="crud-field"><span>Time</span><input type="time" name="start_time" value={formState.start_time} onChange={handleInputChange} /></label>
+                                <label className="crud-field"><span>Start Time</span><input type="time" name="start_time" value={formState.start_time} onChange={handleInputChange} /></label>
+                                <label className="crud-field"><span>End Time</span><input type="time" name="end_time" value={formState.end_time} onChange={handleInputChange} required /></label>
+                            </div>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Unit Price</span><input type="number" step="0.01" name="unit_price" value={formState.unit_price} onChange={handleInputChange} required /></label>
+                                <label className="crud-field"><span>Discount</span><input type="number" step="0.01" name="discount_applied" value={formState.discount_applied} onChange={handleInputChange} required /></label>
+                                <label className="crud-field"><span>Total Price</span><input type="number" step="0.01" name="total_price" value={formState.total_price} onChange={handleInputChange} required /></label>
+                            </div>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Payment Method</span><input name="payment_method" value={formState.payment_method} onChange={handleInputChange} placeholder="card, cash, wallet..." required /></label>
                                 <label className="crud-field"><span>Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option></select></label>
                             </div>
                             <label className="crud-field"><span>Address</span><input name="address" value={formState.address} onChange={handleInputChange} /></label>
-                            <label className="crud-field"><span>Notes</span><textarea name="notes" value={formState.notes} onChange={handleInputChange} rows={1} /></label>
+                            <label className="crud-field"><span>Notes</span><input name="notes" value={formState.notes} onChange={handleInputChange} /></label>
                             <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Save</button></div>
                         </form>
                     </div>

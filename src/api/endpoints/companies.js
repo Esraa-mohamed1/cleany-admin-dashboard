@@ -154,6 +154,10 @@ export const updateCompany = async (id, payload) => {
     }
 
     try {
+        if (payload instanceof FormData) {
+            payload.append('_method', 'PUT');
+            return await axiosInstance.post(`/companies/${id}`, payload);
+        }
         return await axiosInstance.put(`/companies/${id}`, payload);
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {

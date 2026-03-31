@@ -15,8 +15,9 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const response = await login(email, password);
-            if (response && response.token) {
-                Cookies.set('token', response.token, { expires: 7 }); // Store for 7 days
+            if (response && response.access_token) {
+                Cookies.set('token', response.access_token, { expires: 7 }); // Store for 7 days
+                if (response.user?.id) Cookies.set('admin_id', String(response.user.id), { expires: 7 });
                 showSuccess('Welcome back!');
                 navigate('/');
             } else {
@@ -34,7 +35,7 @@ const Login: React.FC = () => {
             <div className="login-card">
                 <div className="login-header">
                     <p className="cyber-navbar-kicker">Security Gateway</p>
-                    <h1 className="cyber-standalone-title">Cleany Admin</h1>
+                    <h1 className="cyber-standalone-title" style={{ color: '#3b82f6' }}>Cleany Admin</h1>
                 </div>
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="crud-field">

@@ -5,9 +5,9 @@ import { confirmDelete, showSuccess, showError } from '../utils/alerts';
 
 type UserStatus = 'Active' | 'Inactive';
 type User = { id: number; name: string; email: string; phone: string; role: string; status: UserStatus; };
-type UserFormState = { name: string; email: string; phone: string; role: string; status: UserStatus; };
+type UserFormState = { name: string; email: string; phone: string; role: string; status: UserStatus; profile_photo: File | string | null; password?: string; };
 
-const emptyForm: UserFormState = { name: '', email: '', phone: '', role: 'User', status: 'Active', };
+const emptyForm: UserFormState = { name: '', email: '', phone: '', role: 'user', status: 'Active', profile_photo: null, password: '' };
 
 const Users: React.FC = () => {
     const [data, setData] = useState<User[]>([]);
@@ -36,17 +36,36 @@ const Users: React.FC = () => {
         setFormState(p => ({ ...p, [name]: value }));
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name } = e.target;
+        const file = e.target.files?.[0] || null;
+        setFormState(p => ({ ...p, [name]: file }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formState.name || !formState.email) return;
         try {
-            const payload = { ...formState, full_name: formState.name, is_active: formState.status === 'Active' };
+            const payload = new FormData();
+            Object.entries(formState).forEach(([k, v]) => {
+                if (v !== null && v !== '') payload.append(k, v instanceof window.File ? v : String(v));
+            });
+            payload.append('full_name', formState.name);
+            payload.append('is_active', String(formState.status === 'Active' ? 1 : 0));
+            
             if (editingId) await updateUser(editingId, payload);
             else await createUser(payload);
             showSuccess(editingId ? 'User Updated' : 'User Created');
             setIsModalOpen(false);
             fetchUsers(currentPage);
-        } catch (err) { showError('Save Failed'); }
+        } catch (err: any) {
+            if (err.response?.data?.error) {
+                const msgs = Object.values(err.response.data.error).flat().join(' | ');
+                showError(msgs);
+            } else {
+                showError(err.response?.data?.message || 'Save Failed');
+            }
+        }
     };
 
     const handleDelete = async (u: User) => {
@@ -83,7 +102,7 @@ const Users: React.FC = () => {
                                 </td>
                                 <td>
                                     <div className="crud-actions">
-                                        <button className="crud-action-button" onClick={() => { setEditingId(u.id); setFormState(u); setIsModalOpen(true); }}>Edit</button>
+                                        <button className="crud-action-button" onClick={() => { setEditingId(u.id); setFormState({ ...u, profile_photo: null, password: '' }); setIsModalOpen(true); }}>Edit</button>
                                         <button className="crud-action-button crud-action-danger" onClick={() => handleDelete(u)}>Delete</button>
                                     </div>
                                 </td>
@@ -105,13 +124,19 @@ const Users: React.FC = () => {
                     <div className="crud-modal-panel">
                         <div className="crud-modal-head"><h2>{editingId ? 'Modify' : 'New'} Account</h2><button className="crud-modal-close" onClick={() => setIsModalOpen(false)}>X</button></div>
                         <form className="crud-form" onSubmit={handleSubmit}>
-                            <label className="crud-field"><span>Full Name</span><input name="name" value={formState.name} onChange={handleInputChange} required /></label>
-                            <label className="crud-field"><span>Email Identity</span><input type="email" name="email" value={formState.email} onChange={handleInputChange} required /></label>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Full Name</span><input name="name" value={formState.name} onChange={handleInputChange} required /></label>
+                                <label className="crud-field"><span>Email Identity</span><input type="email" name="email" value={formState.email} onChange={handleInputChange} required /></label>
+                            </div>
                             <div className="form-grid">
                                 <label className="crud-field"><span>Phone</span><input name="phone" value={formState.phone} onChange={handleInputChange} /></label>
-                                <label className="crud-field"><span>Role</span><select name="role" value={formState.role} onChange={handleInputChange}><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="Staff">Staff</option><option value="User">User</option></select></label>
+                                <label className="crud-field"><span>Role</span><select name="role" value={formState.role} onChange={handleInputChange}><option value="company">Company</option><option value="super_admin">Super Admin</option><option value="user">User</option></select></label>
                             </div>
-                            <label className="crud-field"><span>Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                            <label className="crud-field"><span>Password {editingId && '(Leave blank to keep)'}</span><input type="password" name="password" value={formState.password || ''} onChange={handleInputChange} required={!editingId} placeholder="••••••••" /></label>
+                            <div className="form-grid">
+                                <label className="crud-field"><span>Status</span><select name="status" value={formState.status} onChange={handleInputChange}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                                <label className="crud-field"><span>Profile Photo</span><input type="file" className="crud-file-input" name="profile_photo" onChange={handleFileChange} accept="image/*" /></label>
+                            </div>
                             <div className="crud-modal-actions"><button type="button" className="crud-action-button" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="crud-add-button">Deploy Changes</button></div>
                         </form>
                     </div>

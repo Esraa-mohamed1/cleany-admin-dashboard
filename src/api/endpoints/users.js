@@ -157,6 +157,10 @@ export const updateUser = async (id, payload) => {
     }
 
     try {
+        if (payload instanceof FormData) {
+            payload.append('_method', 'PUT');
+            return await axiosInstance.post(`/users/${id}`, payload);
+        }
         return await axiosInstance.put(`/users/${id}`, payload);
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {

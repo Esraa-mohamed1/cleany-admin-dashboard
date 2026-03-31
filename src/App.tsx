@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import Navbar from './components/Navbar.jsx';
-import Dashboard from './pages/Dashboard';
 import Bookings from './pages/Bookings';
 import Companies from './pages/Companies';
 import Categories from './pages/Categories';
@@ -25,7 +24,7 @@ const App: React.FC = () => {
                         <ProtectedRoute>
                             <MainLayout navbar={<Navbar />}>
                                 <Routes>
-                                    <Route path="/" element={<Dashboard />} />
+                                    <Route path="/" element={<Navigate to="/bookings" replace />} />
                                     <Route path="/bookings" element={<Bookings />} />
                                     <Route path="/companies" element={<Companies />} />
                                     <Route path="/categories" element={<Categories />} />

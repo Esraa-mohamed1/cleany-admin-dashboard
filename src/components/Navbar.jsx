@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
 const pageTitles = {
-  '/': 'Dashboard',
+  '/': 'Bookings',
   '/bookings': 'Bookings',
   '/companies': 'Companies',
   '/categories': 'Categories',

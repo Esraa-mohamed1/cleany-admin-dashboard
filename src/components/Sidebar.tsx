@@ -21,7 +21,7 @@ const Sidebar: React.FC = () => {
         <aside className="sidebar">
             <div>
                 <h2 className="sidebar-brand">
-                    Cleany<span> Dashboard</span>
+                    Cleany<span> Admin</span>
                 </h2>
 
                 <nav aria-label="Sidebar Navigation" className="sidebar-nav">
@@ -40,9 +40,6 @@ const Sidebar: React.FC = () => {
                                                     : 'sidebar-link'
                                             }
                                         >
-                                            <span className="sidebar-link-icon" aria-hidden="true">
-                                                {item.icon}
-                                            </span>
                                             <span>{item.label}</span>
                                         </NavLink>
                                     </li>
