@@ -148,7 +148,7 @@ const Bookings: React.FC = () => {
                                 </td>
                                 <td>
                                     <div className="crud-actions">
-                                        {b.status === 'pending' && <button className="crud-action-button" style={{color: '#4ade80'}} onClick={() => handleQuickConfirm(b)}>Confirm</button>}
+                                        {b.status === 'pending' && <button className="crud-action-button crud-action-confirm" onClick={() => handleQuickConfirm(b)}>Confirm</button>}
                                         <button className="crud-action-button" onClick={() => { setEditingId(b.id); setFormState({
             user_id: String(b.user_id),
             company_id: String(b.company_id),

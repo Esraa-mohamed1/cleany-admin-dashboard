@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
@@ -16,6 +17,7 @@ const pageTitles = {
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const title = pageTitles[location.pathname] || 'Dashboard';
   const [isLightTheme, setIsLightTheme] = useState(() => {
     const savedTheme = localStorage.getItem('dashboard-theme');
@@ -34,6 +36,12 @@ const Navbar = () => {
 
   const toggleTheme = () => {
     setIsLightTheme((prev) => !prev);
+  };
+
+  const handleLogout = () => {
+    Cookies.remove('token');
+    Cookies.remove('admin_id');
+    navigate('/login');
   };
 
   return (
@@ -63,8 +71,13 @@ const Navbar = () => {
         >
           {isLightTheme ? '🌙' : '☀'}
         </button>
-        <button className="cyber-icon-button" type="button" aria-label="Settings">
-          ⚙
+        <button 
+          className="logout-button" 
+          type="button" 
+          aria-label="Logout" 
+          onClick={handleLogout}
+        >
+          LOG OUT
         </button>
         <div className="cyber-user-avatar" aria-hidden="true">
           A
